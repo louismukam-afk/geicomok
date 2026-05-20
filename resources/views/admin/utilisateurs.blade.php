@@ -17,6 +17,7 @@
             <th>Nom</th>
             <th>@lang('main.boutique') / @lang('main.magasin')</th>
             <th>Role(s) </th>
+            <th>Fonctions</th>
             <th>Actif</th>
 
             </thead>
@@ -38,6 +39,7 @@
 
                     </td>
                     <td><a href="{{route('role_management',$u->id)}}" class="btn btn-warning btn-xs"><span class="glyphicon glyphicon-lock"></span> Role(s)</a></td>
+                    <td><a href="{{route('action_management',$u->id)}}" class="btn btn-info btn-xs"><span class="glyphicon glyphicon-list-alt"></span> Fonctions</a></td>
 
                     @if($u->active==1)
                         <td>Oui</td>

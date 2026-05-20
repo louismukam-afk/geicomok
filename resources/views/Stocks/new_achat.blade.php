@@ -33,6 +33,16 @@
                             </select>
                         </div>
 
+                        <div class="form-group">
+                            <label for="id_caisse">Caisse de sortie: </label>
+                            <select name="id_caisse" id="id_caisse" form="form-facture" class="form-control" required>
+                                <option value="">-- Choisir --</option>
+                                @foreach($caisses_sortie as $caisse)
+                                    <option value="{{$caisse->id}}">{{$caisse->nom}} ({{number_format($caisse->solde(), 2)}})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                     </div>
                 </div>
                 <table class="table table-condensed table-striped" >

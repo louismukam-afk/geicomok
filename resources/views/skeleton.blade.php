@@ -101,10 +101,17 @@
                 <li onclick='window.location.href="{{route('client_management')}}"'><a href="{{route('client_management')}}">Clients</a></li>
                 <li onclick='window.location.href="{{route('fournisseur_management')}}"'><a href="{{route('fournisseur_management')}}">Fournisseurs</a></li>
                 <li onclick='window.location.href="{{route('email_management')}}"'><a href="{{route('email_management')}}">Email de contact</a></li>
+                <li onclick='window.location.href="{{route('caisses_management')}}"'><a href="{{route('caisses_management')}}">Caisses</a></li>
                 <li onclick='window.location.href="{{route('user_management')}}"'><a href="{{route('user_management')}}">Utilisateurs</a></li>
                 <li onclick='window.location.href="{{route('boutique_management')}}"'><a href="{{route('boutique_management')}}">@lang('main.boutique') / @lang('main.magasin')</a></li>
 
             </ul>
+
+            <li onclick='window.location.href="{{route('ma_caisse_etat')}}"' >
+                <a href="{{route('ma_caisse_etat')}}" class="menu-item">
+                    <i class="fa fa-money fa-lg"></i> Ma caisse
+                </a>
+            </li>
 
             <li onclick='window.location.href="{{route('management')}}"'>
                 <a href="{{route('management')}}" class="menu-item">

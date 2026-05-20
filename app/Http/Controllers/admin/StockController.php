@@ -311,7 +311,7 @@ class StockController extends Controller
         $u=new Usage();
         $u->id_produit=$s->produit->id;
         $u->id_boutique=$cb;
-        $u->date_utilisation=date('Y-m-d H:i');
+        $u->date_utilisation=date('Y-m-d H:i:s');
 
         if($op==1)
         {
@@ -365,7 +365,7 @@ class StockController extends Controller
         $u=new Usage();
         $u->id_produit=$s->produit->id;
         $u->id_boutique=$cb;
-        $u->date_utilisation=date('Y-m-d H:i');
+        $u->date_utilisation=date('Y-m-d H:i:s');
 
         if($op==1)
         {

@@ -5,6 +5,7 @@ namespace GEICOM\Http\Controllers\stocks;
 use GEICOM\Achat;
 use GEICOM\Approvisionnement;
 use GEICOM\Boutique;
+use GEICOM\Caisse;
 use GEICOM\Categorie;
 use GEICOM\Client;
 use GEICOM\Fournisseur;
@@ -14,6 +15,7 @@ use GEICOM\Pays;
 use GEICOM\Produit;
 use GEICOM\ProduitApprov;
 use GEICOM\Usage;
+use GEICOM\MouvementCaisse;
 use Illuminate\Http\Request;
 use GEICOM\Http\Controllers\Controller;
 
@@ -101,9 +103,19 @@ class StockController extends Controller
         $p=Produit::with(['stock'=>function ($query) use($cbId) {
             $query->where('id_boutique',$cbId);
         }])->find($produit);
-        $u=Usage::where('id_produit','=',$produit)->where('id_boutique','=',$cbId)->orderBy('date_utilisation','desc')->orderBy('created_at','desc')->paginate(30);
+        $u0=Usage::where('id_produit','=',$produit)->where('id_boutique','=',$cbId)->orderBy('date_utilisation')->orderBy('id')->get();
+        $timeline=$this->buildUsageTimeline($u0);
 
-        $u0=Usage::where('id_produit','=',$produit)->where('id_boutique','=',$cbId)->orderBy('date_utilisation')->orderBy('created_at')->get();
+        $u=Usage::where('id_produit','=',$produit)
+            ->where('id_boutique','=',$cbId)
+            ->orderBy('date_utilisation','desc')
+            ->orderBy('id','desc')
+            ->paginate(30);
+
+        $u->getCollection()->transform(function ($usage) use ($timeline) {
+            return $this->enrichUsageStock($usage, $timeline);
+        });
+
         $qte=-99999999;
         $lqte=-99999999;
         $i=0;
@@ -169,8 +181,14 @@ class StockController extends Controller
         }
 
 
+        $dernierMouvement=count($timeline) ? end($timeline) : null;
+        $stockEnregistre=$p->stock ? $p->stock->quantite : 0;
+        $stockCalcule=$dernierMouvement ? $dernierMouvement['stock_restant'] : $stockEnregistre;
+
         $this->values['moyenne_produit']=$moy_prod;
         $this->values['moyenne_jour']=$moy_jours;
+        $this->values['stock_calcule']=$stockCalcule;
+        $this->values['stock_enregistre']=$stockEnregistre;
 
         $this->values['usages']=$u;
         $this->values['produit']=$p;
@@ -179,6 +197,194 @@ class StockController extends Controller
 
 
         return view('stocks.historique',$this->values);
+    }
+
+    public function synchroniser_historique(Request $request)
+    {
+        $this->validate($request,[
+            "produit"=>"required",
+        ]);
+
+        $cb=session('current_boutique');
+        $cbId=$cb->id;
+        $produit=$request->input('produit');
+
+        $p=Produit::with(['stock'=>function ($query) use($cbId) {
+            $query->where('id_boutique',$cbId);
+        }])->find($produit);
+
+        if (!$p || !$p->stock) {
+            return redirect()->to(\URL::previous())->withErrors(['stock'=>'Stock introuvable pour ce produit']);
+        }
+
+        $usages=Usage::where('id_produit','=',$produit)
+            ->where('id_boutique','=',$cbId)
+            ->orderBy('date_utilisation')
+            ->orderBy('id')
+            ->get();
+        $timeline=$this->buildUsageTimeline($usages);
+
+        if (!count($timeline)) {
+            return redirect()->to(\URL::previous())->withErrors(['stock'=>'Aucun historique disponible pour synchroniser ce stock']);
+        }
+
+        $dernierMouvement=end($timeline);
+        $p->stock->quantite=$dernierMouvement['stock_restant'];
+        $p->stock->save();
+
+        return redirect()->route('view_historique', ['produit'=>$produit])->withSuccess(['ok'=>'Stock synchronisé avec l historique']);
+    }
+
+    public function historique_general(Request $request)
+    {
+        $cb=session('current_boutique');
+        $cbId=$cb->id;
+        $produit=$request->input('produit', 0);
+        $dateDebut=$request->input('date_debut', date('Y-m-01'));
+        $dateFin=$request->input('date_fin', date('Y-m-d'));
+        $dateDebutSql=$dateDebut.' 00:00:00';
+        $dateFinSql=$dateFin.' 23:59:59';
+
+        $produits=Produit::with(['categorie', 'stock'=>function ($query) use($cbId) {
+            $query->where('id_boutique', $cbId);
+        }])->orderBy('libelle')->get();
+        $produitsMap=$produits->keyBy('id');
+
+        $query=Usage::where('id_boutique', $cbId)
+            ->where('date_utilisation', '<=', $dateFinSql)
+            ->orderBy('id_produit')
+            ->orderBy('date_utilisation')
+            ->orderBy('id');
+
+        if ($produit != 0) {
+            $query->where('id_produit', $produit);
+        }
+
+        $usages=$query->get();
+        $lignes=[];
+
+        foreach ($usages->groupBy('id_produit') as $idProduit => $usagesProduit) {
+            $timeline=$this->buildUsageTimeline($usagesProduit);
+
+            foreach ($usagesProduit as $usage) {
+                if ($usage->date_utilisation < $dateDebutSql || $usage->date_utilisation > $dateFinSql) {
+                    continue;
+                }
+
+                $usage=$this->enrichUsageStock($usage, $timeline);
+                $usage->produit_info=$produitsMap->has($idProduit) ? $produitsMap->get($idProduit) : null;
+                $lignes[]=$usage;
+            }
+        }
+
+        usort($lignes, function ($a, $b) {
+            if ($a->date_utilisation == $b->date_utilisation) {
+                return $b->id - $a->id;
+            }
+            return strcmp($b->date_utilisation, $a->date_utilisation);
+        });
+
+        $page=(int)$request->input('page', 1);
+        $perPage=100;
+        $items=array_slice($lignes, ($page - 1) * $perPage, $perPage);
+        $paginator=new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            count($lignes),
+            $perPage,
+            $page,
+            [
+                'path'=>route('historique_stocks_general'),
+                'query'=>$request->except('page'),
+            ]
+        );
+
+        $this->values['title']='Historique des stocks par periode';
+        $this->values['produits']=$produits;
+        $this->values['produit_id']=$produit;
+        $this->values['date_debut']=$dateDebut;
+        $this->values['date_fin']=$dateFin;
+        $this->values['usages']=$paginator;
+
+        return view('stocks.historique_general', $this->values);
+    }
+
+    private function buildUsageTimeline($usages)
+    {
+        $timeline=[];
+        $stockCourant=null;
+
+        foreach ($usages as $usage) {
+            $sens=$this->usageSens($usage->details);
+            $quantite=abs((float)$usage->quantite);
+            $variation=$sens === 'sortie' ? -$quantite : $quantite;
+            $stockEnregistre=(float)$usage->stock;
+            $stockAvant=$stockCourant === null ? $stockEnregistre - $variation : $stockCourant;
+            $stockRestant=$stockAvant + $variation;
+
+            $timeline[$usage->id]=[
+                'sens'=>$sens,
+                'stock_avant'=>$stockAvant,
+                'stock_restant'=>$stockRestant,
+                'stock_enregistre'=>$stockEnregistre,
+                'stock_ecart'=>abs($stockRestant - $stockEnregistre) > 0.0001,
+                'is_inventaire'=>$this->isInventaireUsage($usage->details),
+            ];
+
+            $stockCourant=$stockRestant;
+        }
+
+        return $timeline;
+    }
+
+    private function enrichUsageStock($usage, $timeline=[])
+    {
+        if (isset($timeline[$usage->id])) {
+            $usage->sens=$timeline[$usage->id]['sens'];
+            $usage->stock_avant=$timeline[$usage->id]['stock_avant'];
+            $usage->stock_restant=$timeline[$usage->id]['stock_restant'];
+            $usage->stock_enregistre=$timeline[$usage->id]['stock_enregistre'];
+            $usage->stock_ecart=$timeline[$usage->id]['stock_ecart'];
+            $usage->is_inventaire=$timeline[$usage->id]['is_inventaire'];
+
+            return $usage;
+        }
+
+        $sens=$this->usageSens($usage->details);
+        $quantite=abs((float)$usage->quantite);
+        $stockRestant=(float)$usage->stock;
+        $usage->sens=$sens;
+        $usage->stock_restant=$stockRestant;
+        $usage->stock_avant=$sens === 'sortie' ? $stockRestant + $quantite : $stockRestant - $quantite;
+        $usage->stock_enregistre=$stockRestant;
+        $usage->stock_ecart=false;
+        $usage->is_inventaire=$this->isInventaireUsage($usage->details);
+
+        return $usage;
+    }
+
+    private function usageSens($details)
+    {
+        $details=strtolower((string)$details);
+
+        if (strpos($details, 'vente') !== false
+            || strpos($details, 'vendu') !== false
+            || strpos($details, 'vendue') !== false
+            || strpos($details, 'retir') !== false
+            || strpos($details, 'ecart = -') !== false
+            || strpos($details, 'ecart=-') !== false
+            || strpos($details, 'change') !== false
+            || strpos($details, 'chang') !== false
+            || strpos($details, 'approvisionnement de ') !== false) {
+            return 'sortie';
+        }
+
+        return 'entree';
+    }
+
+    private function isInventaireUsage($details)
+    {
+        $details=strtolower((string)$details);
+        return strpos($details, 'inventaire') !== false;
     }
 
     /**
@@ -208,6 +414,13 @@ class StockController extends Controller
 
 
         $this->values['fournisseurs']=$c;
+        $this->values['caisses_sortie']=Caisse::where('type', Caisse::TYPE_SORTIE)
+            ->where('active', 1)
+            ->whereHas('users', function ($query) {
+                $query->where('users.id', \Auth::user()->id);
+            })
+            ->orderBy('nom')
+            ->get();
 
         return view('stocks.new_achat',$this->values);
 
@@ -240,7 +453,8 @@ class StockController extends Controller
         $this->validate($request,[
             'fournisseur'=>'required',
             'id'=>'required',
-            'date'=>'date|required'
+            'date'=>'date|required',
+            'id_caisse'=>'required|numeric'
 
         ]);
         $id_list=$request->input('id');
@@ -249,6 +463,11 @@ class StockController extends Controller
         $reduction_gen=$request->input('reduction_generale');
         $fournisseur=$request->input('fournisseur');
         $date=$request->input('date');
+        $idCaisse=$request->input('id_caisse');
+        $caisse=Caisse::where('id', $idCaisse)->where('type', Caisse::TYPE_SORTIE)->first();
+        if(!$caisse) {
+            return redirect()->to(\URL::previous())->withErrors(['caisse'=>'Veuillez choisir une caisse de sortie valide']);
+        }
 
         $cb=session('current_boutique');
         $cbId=$cb->id;
@@ -259,12 +478,40 @@ class StockController extends Controller
             $f->id_fournisseur = $fournisseur;
             $f->id_boutique=$cbId;
             $f->id_user=\Auth::user()->id;
+            $f->id_caisse=$idCaisse;
             $f->save();
             $f->numero = 'LI' . sprintf('%08d', $f->id);
             $i = 0;$total=0;
             $p = Produit::with(['stock'=>function ($query) use($cbId) {
                 $query->where('id_boutique',$cbId);
             }])->whereIn('id', $id_list)->get();
+
+            $totalPrevisionnel = 0;
+            foreach ($id_list as $index => $id) {
+                $prodPrevision = $p->where('id', '=', $id)->first();
+                $redPrevision = isset($reduction_list[$index]) ? $reduction_list[$index] : null;
+                if ($prodPrevision) {
+                    if ($redPrevision) {
+                        $totalPrevisionnel += ($prodPrevision->prix_achat - $redPrevision) * $quantite_list[$index];
+                    } else {
+                        $totalPrevisionnel += $prodPrevision->prix_achat * $quantite_list[$index];
+                    }
+                }
+            }
+            $tvaPrevision = 0;
+            $tvaAchatPrevision = Parametre::where('nom','=','tva_achat')->first();
+            if ($tvaAchatPrevision && $tvaAchatPrevision->valeur == 1) {
+                $tvaPrevision = Parametre::where('nom','=','tva')->first()->valeur;
+            }
+            if ($reduction_gen) {
+                $totalPrevisionnel = $totalPrevisionnel - ($totalPrevisionnel * $reduction_gen / 100);
+            }
+            $totalPrevisionnel = $totalPrevisionnel + ($totalPrevisionnel * ($tvaPrevision) / 100);
+            if ($caisse->solde() < $totalPrevisionnel) {
+                $f->delete();
+                return redirect()->to(\URL::previous())->withErrors(['solde'=>'Solde insuffisant dans la caisse de sortie']);
+            }
+
             foreach ($id_list as $id) {
                 $prod = $p->where('id', '=', $id)->first();
 
@@ -302,7 +549,7 @@ class StockController extends Controller
                 $u->id_produit=$prod->id;
                 $u->id_boutique=$cbId;
                 $u->details="Achat: Quantité acheté = ".$quantite_list[$i];
-                $u->date_utilisation=$date.' '.date('H:i');
+                $u->date_utilisation=$date.' '.date('H:i:s');
                 $u->stock=$prod->stock->quantite;
                 $u->quantite=$quantite_list[$i];
                 $u->save();
@@ -323,6 +570,7 @@ class StockController extends Controller
             $f->tva=$tva;
             $f->total=$total+($total*($tva)/100);
             $f->save();
+            MouvementCaisse::enregistrer($idCaisse, 'sortie', $f->total, 'achat', $f->id, 'Achat '.$f->numero, $date.' '.date('H:i:s'));
 
             return redirect()->route('nouvel_achat');
 
@@ -416,7 +664,7 @@ class StockController extends Controller
                 $u->id_produit=$prod->id;
                 $u->id_boutique=$cbId;
                 $u->details="Approvisionnement depuis ".Boutique::find($magasin)->nom.": Quantité  = ".$quantite_list[$i];
-                $u->date_utilisation=$date.' '.date('H:i');
+                $u->date_utilisation=$date.' '.date('H:i:s');
                 $u->stock=$prod2->stock->quantite;
                 $u->quantite=$quantite_list[$i];
                 $u->save();
@@ -425,7 +673,7 @@ class StockController extends Controller
                 $u->id_produit=$prod->id;
                 $u->id_boutique=$magasin;
                 $u->details="Approvisionnement de ".$cb->nom.": Quantité livrée = ".$quantite_list[$i];
-                $u->date_utilisation=$date.' '.date('H:i');
+                $u->date_utilisation=$date.' '.date('H:i:s');
                 $u->stock=$prod->stock->quantite;
                 $u->quantite=$quantite_list[$i];
                 $u->save();
@@ -632,7 +880,7 @@ class StockController extends Controller
         $u1=new Usage();
         $u1->id_produit=$p->id;
         $u1->id_boutique=$cbId;
-        $u1->date_utilisation=date('Y-m-d H:i');
+        $u1->date_utilisation=date('Y-m-d H:i:s');
         $u1->quantite=$quantite;
         $u1->stock=$p->stock->quantite;
         $u1->details='Changé en '.$p->produit_lie->produit_c->libelle;
@@ -643,7 +891,7 @@ class StockController extends Controller
         $u1=new Usage();
         $u1->id_produit=$p->produit_lie->produit_c->id;
         $u1->id_boutique=$cbId;
-        $u1->date_utilisation=date('Y-m-d H:i');
+        $u1->date_utilisation=date('Y-m-d H:i:s');
         $u1->quantite=$quantite*$p->produit_lie->quantite;
         $u1->stock=$p->produit_lie->produit_c->stock->quantite;
         $u1->details='Provenant  de '.$p->libelle;

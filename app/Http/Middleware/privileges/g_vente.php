@@ -18,7 +18,10 @@ class g_vente
     public function handle($request, Closure $next)
     {
         $r=Auth::user()->roles->pluck('value')->toArray();
-        if(!Functions::pp_exists($r,2) && !Functions::contain($r,16)){
+        $routeAction = $request->route()->getAction();
+        $action = isset($routeAction['action']) ? $routeAction['action'] : null;
+
+        if(!Functions::pp_exists($r,2) && !Functions::contain($r,16) && (!$action || !Auth::user()->canDoAction($action))){
             return redirect()->route('not_auth');
         }
         /*   if(!Functions::pp_exists($r,16)){

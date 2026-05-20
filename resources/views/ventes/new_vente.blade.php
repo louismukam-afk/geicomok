@@ -33,6 +33,16 @@
                             </select>
                         </div>
 
+                        <div class="form-group">
+                            <label for="id_caisse">Caisse d'entree: </label>
+                            <select name="id_caisse" id="id_caisse" form="form-facture" class="form-control" required>
+                                <option value="">-- Choisir --</option>
+                                @foreach($caisses_entree as $caisse)
+                                    <option value="{{$caisse->id}}">{{$caisse->nom}} ({{number_format($caisse->solde(), 2)}})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                     </div>
                 </div>
                 <table class="table table-condensed table-striped" >
@@ -349,6 +359,7 @@
                             str="";
 
                             for(i=0;i<produits.length;i++){
+                                produits[i].stock = produits[i].stock || {quantite: 0};
 
                                 // On ajoute les prix multiples dans le JSON produit (prix_gros, prix_semi_gros, prix_comptoir)
                                 str+= '<li class="product-li">'+

@@ -11,5 +11,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Usage extends Model
 {
-    //
+    public function produit()
+    {
+        return $this->belongsTo(Produit::class, 'id_produit');
+    }
 }

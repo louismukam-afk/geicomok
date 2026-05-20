@@ -1,12 +1,22 @@
 @extends('skeleton')
 @section('content')
     @include('perso.functions')
+    @php
+        $canCreateProduit = Auth::user()->canDoAction(\GEICOM\action::ACTION_ADMIN_PRODUIT_ACTION_STORE);
+        $canUpdateProduit = Auth::user()->canDoAction(\GEICOM\action::ACTION_ADMIN_PRODUIT_ACTION_UPDATE);
+        $canDeleteProduit = Auth::user()->canDoAction(\GEICOM\action::ACTION_ADMIN_PRODUIT_ACTION_DELETE);
+        $canSeeProduitLies = Auth::user()->canDoAction(\GEICOM\action::ACTION_ADMIN_PRODUIT_LIES_ACTION_INDEX_LIES);
+    @endphp
 
     <div class="col-md-12">
 
-        <button class="btn btn-primary" data-toggle="modal" data-backdrop="false" href="#add_pdt"
-        ><span class="glyphicon glyphicon-plus"></span> Nouveau produit</button>
-        <td><a href="#multi-delete" id="multi-delete" onclick="sendToDelete('{{route('mdelete_produit')}}')"  class="btn btn-danger btn-xs pull-right"><span class="glyphicon glyphicon-trash"></span> remove</a></td>
+        @if($canCreateProduit)
+            <button class="btn btn-primary" data-toggle="modal" data-backdrop="false" href="#add_pdt"
+            ><span class="glyphicon glyphicon-plus"></span> Nouveau produit</button>
+        @endif
+        @if($canDeleteProduit)
+            <td><a href="#multi-delete" id="multi-delete" onclick="sendToDelete('{{route('mdelete_produit')}}')"  class="btn btn-danger btn-xs pull-right"><span class="glyphicon glyphicon-trash"></span> remove</a></td>
+        @endif
         <!-- Champ de recherche -->
         <div class="form-group" style="margin-top: 15px;">
             <input type="text" id="searchProduit" class="form-control" placeholder="Rechercher un produit...">
@@ -25,8 +35,8 @@
                 <th>Prix de vente en semi-gros</th>
                 <th>Prix de vente comptoir</th>
                 <th>Prix d'achat</th>
-                <td></td>
-                <th><input type="checkbox" id="master-check" onchange="master_check_change(this)"> </th>
+                @if($canSeeProduitLies)<td></td>@endif
+                @if($canDeleteProduit)<th><input type="checkbox" id="master-check" onchange="master_check_change(this)"> </th>@endif
             </tr>
 
             </thead>
@@ -38,7 +48,13 @@
                     <td>{{$p->reference}}</td>
                   {{--<a href="#edit_pdt" data-toggle="modal" data-backdrop="false" onclick="edit_pdt({{$p->id}},'{{$p->reference}}','{{sanitize($p->libelle)}}',{{$p->id_categorie}},'{{$p->prix_minimum}}',{{$p->prix}},{{$p->prix_gros}},{{$p->prix_semi_gros}},{{$p->prix_comptoir}},{{$p->prix_achat}},'{{sanitize($p->description)}}')"><strong ><span class="glyphicon glyphicon-edit"></span> {{$p->libelle}}</strong></a></td>--}}
 
-                   <td><a href="#edit_pdt" data-toggle="modal" data-backdrop="false" onclick="edit_pdt({{$p->id}},'{{$p->reference}}','{{sanitize($p->libelle)}}',{{$p->id_categorie}},'{{$p->prix_minimum}}',{{$p->prix}},{{$p->prix_gros}},{{$p->prix_semi_gros}},{{$p->prix_comptoir}},{{$p->prix_achat}},'{{sanitize($p->description)}}')"><strong ><span class="glyphicon glyphicon-edit"></span> {{$p->libelle}}</strong></a></td>
+                   <td>
+                       @if($canUpdateProduit)
+                           <a href="#edit_pdt" data-toggle="modal" data-backdrop="false" onclick="edit_pdt({{$p->id}},'{{$p->reference}}','{{sanitize($p->libelle)}}',{{$p->id_categorie}},'{{$p->prix_minimum}}',{{$p->prix}},{{$p->prix_gros}},{{$p->prix_semi_gros}},{{$p->prix_comptoir}},{{$p->prix_achat}},'{{sanitize($p->description)}}')"><strong ><span class="glyphicon glyphicon-edit"></span> {{$p->libelle}}</strong></a>
+                       @else
+                           <strong>{{$p->libelle}}</strong>
+                       @endif
+                   </td>
 
                     <td>
                         {{$p->categorie->libelle}}
@@ -49,12 +65,16 @@
                     <td>{{$p->prix_semi_gros}} @lang('main.devise')</td>
                     <td>{{$p->prix_comptoir}} @lang('main.devise')</td>
                     <td>{{$p->prix_achat}} @lang('main.devise')</td>
+                    @if($canSeeProduitLies)
                     <td>
                         <a href="{{route('produit_lies_management',$p->id)}}" class="btn btn-warning btn-xs"> <span class="glyphicon glyphicon-link"></span> Produits Liés
                         </a>
                     </td>
 
+                    @endif
+                    @if($canDeleteProduit)
                     <td><input type="checkbox" name="delete[]" value="{{$p->id}}" class="check-list" ></td>
+                    @endif
                 </tr>
             @endforeach
             </tbody>
@@ -64,6 +84,7 @@
         <div class="paginate" style="text-align: center;"> <?php echo(str_replace('/?', '?', $produit->render()) ); ?></div>
 
 
+        @if($canCreateProduit)
         <div class="modal fade" id="add_pdt">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -156,6 +177,9 @@
             </div>
         </div>
 
+        @endif
+
+        @if($canUpdateProduit)
         <div class="modal fade" id="edit_pdt">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -163,9 +187,7 @@
                         <button type="button" class="close" data-dismiss="modal">x</button>
                         <h4 class="modal-title">Please fill the fields</h4>
                     </div>
-                    <div
-                            class="modal-body">
-
+                    <div class="modal-body">
 
 
                         <form accept-charset="UTF-8" id="edit_produit_form" role="form" method="POST" action="{{route('update_produit')}}">
@@ -251,6 +273,7 @@
 
             </div>
         </div>
+        @endif
 
     </div>
 

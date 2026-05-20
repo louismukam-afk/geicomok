@@ -26,6 +26,16 @@
 
         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
             <div class="div-square">
+                <a href="#mod_list_ventes_connecte" data-toggle="modal" >
+                    <i class="fa fa-user fa-5x"></i>
+                    <h4>RÃ©capitulatif de mes ventes </h4>
+                </a>
+            </div>
+
+        </div>
+
+        <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
+            <div class="div-square">
                 <a href="#mod_list_ventes_p" data-toggle="modal" >
                     <i class="fa fa-list fa-5x"></i>
                     <h4>Recapitulatifs des produits avec les marges </h4>
@@ -69,6 +79,15 @@
                 <a href="{{route('liste_clients')}}" >
                     <i class="fa fa-users fa-5x"></i>
                     <h4>Liste des clients </h4>
+                </a>
+            </div>
+
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
+            <div class="div-square">
+                <a href="{{route('bons_credit')}}" >
+                    <i class="fa fa-credit-card fa-5x"></i>
+                    <h4>Bons de credit </h4>
                 </a>
             </div>
 
@@ -334,6 +353,65 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Date de début: </label>
+                                    <div class="input-group">
+                                        <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                        <input type="date" name="dd" class="form-control">
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Date de fin: </label>
+                                    <div class="input-group">
+                                        <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                        <input type="date" name="df" class="form-control">
+
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <input class="btn  btn-success " type="submit" value="confirmer">
+
+
+                        </fieldset>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="mod_list_ventes_connecte">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <button type="button" class="close" data-dismiss="modal">X</button>
+                    <h4 class="modal-title">Selectionner la pÃ©riode: </h4>
+                </div>
+                <div class="modal-body">
+
+                    <form accept-charset="UTF-8" role="form" id="form_list_ventes_connecte" method="get" action="{{route('liste_ventes_connecte')}}">
+                        <fieldset style="">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Client:  </label>
+                                    <div class="input-group">
+                                        <span class="input-group-addon"><span class="glyphicon glyphicon-user"></span></span>
+                                        <select form="form_list_ventes_connecte" class="form-control" name="client" >
+                                            <option value="0">   @lang('main.tous')  </option>
+                                            @foreach($Clients as $c)
+                                                <option value="{{$c->id}}">{{$c->nom}}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Date de dÃ©but: </label>
                                     <div class="input-group">
                                         <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
                                         <input type="date" name="dd" class="form-control">

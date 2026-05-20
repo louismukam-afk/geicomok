@@ -3,6 +3,7 @@
 namespace GEICOM\Http\Controllers\ventes;
 
 use Auth;
+use GEICOM\Caisse;
 use GEICOM\Client;
 use GEICOM\Facture;
 use GEICOM\Fournisseur;
@@ -14,6 +15,7 @@ use GEICOM\Pays;
 use GEICOM\Produit;
 use GEICOM\Usage;
 use GEICOM\Vente;
+use GEICOM\MouvementCaisse;
 use Illuminate\Http\Request;
 use GEICOM\Http\Controllers\Controller;
 
@@ -36,6 +38,22 @@ class VentesController extends Controller
 
         $this->values['title']='Nouvelle vente';
     }
+
+    private function normalizePeriod(Request $request)
+    {
+        $dd = $request->input('dd') ?: '1970-01-01 00:00:00';
+        $df = $request->input('df') ?: date('Y-m-d 23:59:59');
+
+        if (strlen($dd) === 10) {
+            $dd .= ' 00:00:00';
+        }
+        if (strlen($df) === 10) {
+            $df .= ' 23:59:59';
+        }
+
+        return [$dd, $df];
+    }
+
     public function index()
     {
         array_forget($this->values,'title');
@@ -67,6 +85,13 @@ class VentesController extends Controller
 
         $this->values['clients']=$c;
         $this->values['pays']=$p;
+        $this->values['caisses_entree']=Caisse::where('type', Caisse::TYPE_ENTREE)
+            ->where('active', 1)
+            ->whereHas('users', function ($query) {
+                $query->where('users.id', \Auth::user()->id);
+            })
+            ->orderBy('nom')
+            ->get();
 
         return view('ventes.new_vente',$this->values);
 
@@ -77,7 +102,8 @@ class VentesController extends Controller
             'client'         => 'required',
             'id'             => 'required|array',
             'date'           => 'date|required',
-            'montant_verse'  => 'numeric|required'
+            'montant_verse'  => 'numeric|required',
+            'id_caisse'      => 'required|numeric'
         ]);
 
         $id_list        = $request->input('id');
@@ -90,6 +116,11 @@ class VentesController extends Controller
         $verse          = $request->input('montant_verse');
         $manuel          = $request->input('numfacture_manuel');
         $cb             = session('current_boutique')->id;
+        $idCaisse       = $request->input('id_caisse');
+        $caisse = Caisse::where('id', $idCaisse)->where('type', Caisse::TYPE_ENTREE)->first();
+        if (!$caisse) {
+            return redirect()->to(\URL::previous())->withErrors(['caisse' => 'Veuillez choisir une caisse d entree valide']);
+        }
 
         if ($id_list) {
             // Création de la facture
@@ -99,6 +130,7 @@ class VentesController extends Controller
             $f->id_client = $client;
             $f->numfacture_manuel = $manuel;
             $f->id_user = \Auth::user()->id;
+            $f->id_caisse = $idCaisse;
             $f->save();
 
             $f->numero = 'FA' . sprintf('%08d', $f->id);
@@ -163,7 +195,7 @@ class VentesController extends Controller
                 $u->id_produit = $prod->id;
                 $u->id_boutique = $cb;
                 $u->details = "Vente: Quantité vendue = " . $quantite_list[$i];
-                $u->date_utilisation = $date . ' ' . date('H:i');
+                $u->date_utilisation = $date . ' ' . date('H:i:s');
                 $u->stock = $prod->stock->quantite;
                 $u->quantite = $quantite_list[$i];
                 $u->save();
@@ -184,6 +216,7 @@ class VentesController extends Controller
             $f->verse = ($verse >= $f->total) ? $f->total : $verse;
 
             $f->save();
+            MouvementCaisse::enregistrer($idCaisse, 'entree', $f->verse, 'vente', $f->id, 'Vente '.$f->numero, $date.' '.date('H:i:s'));
 
             return redirect()->route('show_facture', $f->id);
         }
@@ -309,7 +342,7 @@ class VentesController extends Controller
                 $u->id_produit = $prod->id;
                 $u->id_boutique = $cb;
                 $u->details = "Vente: Quantité vendu = ".$quantite_list[$i];
-                $u->date_utilisation = $date.' '.date('H:i');
+                $u->date_utilisation = $date.' '.date('H:i:s');
                 $u->stock = $prod->stock->quantite;
                 $u->quantite = $quantite_list[$i];
                 $u->save();
@@ -425,7 +458,7 @@ class VentesController extends Controller
                 $u->id_produit      = $prod->id;
                 $u->id_boutique     = $cb;
                 $u->details         = "Vente: Quantité vendue = " . $quantite_list[$i];
-                $u->date_utilisation= $date . ' ' . date('H:i');
+                $u->date_utilisation= $date . ' ' . date('H:i:s');
                 $u->stock           = $prod->stock->quantite;
                 $u->quantite        = $quantite_list[$i];
                 $u->save();
@@ -538,7 +571,7 @@ class VentesController extends Controller
                 $u->id_produit = $prod->id;
                 $u->id_boutique = $cb;
                 $u->details = "Vente: Quantité vendue = ".$quantite_list[$i];
-                $u->date_utilisation = $date.' '.date('H:i');
+                $u->date_utilisation = $date.' '.date('H:i:s');
                 $u->stock = $prod->stock->quantite;
                 $u->quantite = $quantite_list[$i];
                 $u->save();
@@ -650,7 +683,7 @@ class VentesController extends Controller
                     $u->id_produit=$prod->id;
                     $u->id_boutique=$cb;
                     $u->details="Vente: Quantité vendu = ".$quantite_list[$i];
-                    $u->date_utilisation=$date.' '.date('H:i');
+                    $u->date_utilisation=$date.' '.date('H:i:s');
                     $u->stock=$prod->stock->quantite;
                     $u->quantite=$quantite_list[$i];
                     $u->save();
@@ -776,13 +809,12 @@ class VentesController extends Controller
             'client'=>'required',
         ]);
 
-        $dd=$request->input('dd');
-        $df=$request->input('df');
+        list($dd, $df) = $this->normalizePeriod($request);
         $client=$request->input('client');
         /*dump($client);
         die();*/
        // \Auth::user()->id;
-        $user=\Auth::user()->id;
+        $user=0;
 
         if(!$dd)
             $dd='1970-01-01';
@@ -793,10 +825,10 @@ class VentesController extends Controller
 
         if($client==0)
 
-            $f=Facture::with('client')->where('id_boutique','=',$cbId)->where('date_vente','>=',$dd)->where('date_vente','<=',$df)->orderBy('date_vente','desc')->where('id_user','=',$user)->orderBy('created_at','desc')->get();
+            $f=Facture::with(['client', 'user'])->where('id_boutique','=',$cbId)->where('date_vente','>=',$dd)->where('date_vente','<=',$df)->orderBy('date_vente','desc')->orderBy('created_at','desc')->get();
 
         else{
-            $f=Facture::with('client')->where('id_boutique','=',$cbId)->where('date_vente','>=',$dd)->where('date_vente','<=',$df)->where('id_client','=',$client)->orderBy('date_vente','desc')->where('id_user','=',$user)->orderBy('created_at','desc')->get();
+            $f=Facture::with(['client', 'user'])->where('id_boutique','=',$cbId)->where('date_vente','>=',$dd)->where('date_vente','<=',$df)->where('id_client','=',$client)->orderBy('date_vente','desc')->orderBy('created_at','desc')->get();
 
             $this->values['client']=Client::find($client);
 
@@ -807,6 +839,39 @@ class VentesController extends Controller
         $this->values['factures']=$f;
         return view('ventes.liste_ventes',$this->values);
 
+    }
+
+    public function liste_ventes_connecte(Request $request)
+    {
+        $cb=session('current_boutique');
+        $cbId=$cb->id;
+        $this->validate($request,[
+            'client'=>'required',
+        ]);
+
+        list($dd, $df) = $this->normalizePeriod($request);
+        $client=$request->input('client');
+        $user=\Auth::user()->id;
+
+        $this->values['title']='Récapitulatif de mes ventes';
+
+        $queryFactures = Facture::with(['client', 'user'])
+            ->where('id_boutique','=',$cbId)
+            ->where('date_vente','>=',$dd)
+            ->where('date_vente','<=',$df)
+            ->where('id_user','=',$user)
+            ->orderBy('date_vente','desc')
+            ->orderBy('created_at','desc');
+
+        if($client!=0){
+            $queryFactures->where('id_client','=',$client);
+            $this->values['client']=Client::find($client);
+        }
+
+        $this->values['dd']=$dd;
+        $this->values['df']=$df;
+        $this->values['factures']=$queryFactures->get();
+        return view('ventes.liste_ventes',$this->values);
     }
 
     //ventes avec benefices
@@ -820,17 +885,14 @@ class VentesController extends Controller
             'client' => 'required',
         ]);
 
-        $dd = $request->input('dd') ?: '1970-01-01';
-        $df = $request->input('df') ?: date('Y-m-d 23:59:59');
+        list($dd, $df) = $this->normalizePeriod($request);
         $client = $request->input('client');
-        $user = \Auth::user()->id;
 
         $this->values['title'] = 'Récapitulatif des ventes par client et produit';
 
         $queryFactures = Facture::with(['client', 'ventes.produit'])
             ->where('id_boutique', $cbId)
             ->whereBetween('date_vente', [$dd, $df])
-            ->where('id_user', $user)
             ->orderBy('date_vente', 'desc')
             ->orderBy('created_at', 'desc');
 
@@ -890,8 +952,7 @@ class VentesController extends Controller
             'user' => 'required',
         ]);
 
-        $dd = $request->input('dd') ?: '1970-01-01';
-        $df = $request->input('df') ?: date('Y-m-d 23:59:59');
+        list($dd, $df) = $this->normalizePeriod($request);
         $client = $request->input('client');
         $user = $request->input('user');
 
@@ -900,9 +961,12 @@ class VentesController extends Controller
         $queryFactures = Facture::with(['client', 'ventes.produit', 'user'])
             ->where('id_boutique', $cbId)
             ->whereBetween('date_vente', [$dd, $df])
-            ->where('id_user', $user)
             ->orderBy('date_vente', 'desc')
             ->orderBy('created_at', 'desc');
+
+        if ($user != 0) {
+            $queryFactures->where('id_user', $user);
+        }
 
         if ($client != 0) {
             $queryFactures->where('id_client', $client);
@@ -974,8 +1038,7 @@ class VentesController extends Controller
         ]);
 
         // Dates avec valeurs par défaut si non renseignées
-        $dd = $request->input('dd') ?: '1970-01-01';
-        $df = $request->input('df') ?: date('Y-m-d 23:59:59');
+        list($dd, $df) = $this->normalizePeriod($request);
 
         // Récupérer les filtres user et client, avec 0 par défaut (signifie "tous")
         $client = $request->input('client', 0);

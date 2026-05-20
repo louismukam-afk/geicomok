@@ -14,6 +14,15 @@
             </div>
 
         </div>
+        <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
+            <div class="div-square">
+                <a href="{{route('historique_stocks_general')}}" >
+                    <i class="fa fa-calendar fa-5x"></i>
+                    <h4>Historique par periode </h4>
+                </a>
+            </div>
+
+        </div>
 
         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
             <div class="div-square">
@@ -91,6 +100,24 @@
                 <a href="{{route('liste_fournisseurs')}}" >
                     <i class="fa fa-stack-overflow fa-5x"></i>
                     <h4>Liste des fournisseurs </h4>
+                </a>
+            </div>
+
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
+            <div class="div-square">
+                <a href="{{route('inventaires')}}" >
+                    <i class="fa fa-check-square-o fa-5x"></i>
+                    <h4>Inventaires </h4>
+                </a>
+            </div>
+
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
+            <div class="div-square">
+                <a href="{{route('inventaires_rapport')}}" >
+                    <i class="fa fa-bar-chart fa-5x"></i>
+                    <h4>Rapport inventaire </h4>
                 </a>
             </div>
 

@@ -8,7 +8,18 @@
 
         <div class="col-md-6">
             <h3>Historique: <strong>{{$produit->libelle}}</strong></h3>
-            <h3>Quantité actuelle: <strong>{{$produit->stock->quantite}}</strong></h3>
+            <h3>Quantité actuelle: <strong>{{number_format($stock_calcule, 0, ',', ' ')}}</strong></h3>
+            @if($stock_calcule != $stock_enregistre)
+                <div class="alert alert-warning" style="padding: 8px 12px;margin-bottom: 10px;">
+                    Stock enregistré en base: <strong>{{number_format($stock_enregistre, 0, ',', ' ')}}</strong>.
+                    Stock recalculé par l'historique: <strong>{{number_format($stock_calcule, 0, ',', ' ')}}</strong>.
+                    <form action="{{route('sync_historique_stock')}}" method="post" style="display: inline-block;margin-left: 10px;">
+                        {{csrf_field()}}
+                        <input type="hidden" name="produit" value="{{$produit->id}}">
+                        <button type="submit" class="btn btn-xs btn-warning">Synchroniser le stock</button>
+                    </form>
+                </div>
+            @endif
 
         </div>
         <div class="col-md-6">
@@ -24,19 +35,37 @@
             @if((new DateTime($u->date_utilisation))->format('Y-m-d') != $cur_date)
                 <?php $cur_date=(new DateTime($u->date_utilisation))->format('Y-m-d') ?>
                 <tr class="bg-primary">
-                    <td colspan="5">
+                    <td colspan="6">
                         <h4> <strong>{{(new DateTime($u->date_utilisation))->format('d-m-Y')}}</strong></h4>
 
                     </td>
                 </tr>
             @endif
 
-            <tr>
+            <tr @if($u->is_inventaire) class="warning" @endif>
                 <td></td>
                 <td><strong>{{(new DateTime($u->date_utilisation))->format('H:i')}}</strong></td>
-                <td>{{$u->details}}</td>
-                <td>Quantite: <strong>{{$u->quantite}}</strong> </td>
-                <td>Stock: <strong>{{$u->stock}}</strong> </td>
+                <td>
+                    @if($u->is_inventaire)
+                        <span class="label label-warning">Consolidation inventaire</span><br>
+                    @endif
+                    {{$u->details}}
+                </td>
+                <td>
+                    Mouvement:
+                    @if($u->sens == 'sortie')
+                        <strong class="text-danger">-{{$u->quantite}}</strong>
+                    @else
+                        <strong class="text-success">+{{$u->quantite}}</strong>
+                    @endif
+                </td>
+                <td>Stock avant: <strong>{{number_format($u->stock_avant, 0, ',', ' ')}}</strong> </td>
+                <td>
+                    Stock restant: <strong>{{number_format($u->stock_restant, 0, ',', ' ')}}</strong>
+                    @if($u->stock_ecart)
+                        <br><small class="text-warning">Stock enregistré: {{number_format($u->stock_enregistre, 0, ',', ' ')}}</small>
+                    @endif
+                </td>
 
             </tr>
 

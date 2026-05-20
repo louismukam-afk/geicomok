@@ -47,24 +47,55 @@ class UserController extends Controller
         $this->values['boutiques']=Boutique::orderBy('nom')->get();
         if(session('success')){
             Session::forget('success');
-            $values['success']=true;
+            $this->values['success']=true;
         }
         return view('admin\utilisateurs',$this->values);
     }
 
 
-    public function logs()
+    public function logs(Request $request)
     {
         $cb=session('current_boutique');
         if(!$cb)
             return redirect()->route('home');
-        $this->values['title']='Logs';
+        $this->values['title']='Journal des operations';
 
 
         $cbId=$cb->id;
-        $l=Log::where('id_boutique','=',$cbId)->orderBy('created_at','desc')->paginate(200);
+        $dateDebut=$request->input('date_debut', date('Y-m-01'));
+        $dateFin=$request->input('date_fin', date('Y-m-d'));
+        $operation=$request->input('operation', '');
+        $user=$request->input('user', 0);
+
+        $query=Log::with('user')
+            ->where(function ($q) use($cbId) {
+                $q->where('id_boutique','=',$cbId)
+                    ->orWhere('id_boutique','=',0);
+            })
+            ->where('created_at', '>=', $dateDebut.' 00:00:00')
+            ->where('created_at', '<=', $dateFin.' 23:59:59');
+
+        if($operation){
+            $query->where('operation', $operation);
+        }
+
+        if($user){
+            $query->where('id_user', $user);
+        }
+
+        $l=$query->orderBy('created_at','desc')->paginate(200);
 
         $this->values['logs']=$l;
+        $this->values['users']=User::orderBy('name')->get();
+        $this->values['operations']=Log::whereNotNull('operation')
+            ->select('operation')
+            ->distinct()
+            ->orderBy('operation')
+            ->pluck('operation');
+        $this->values['date_debut']=$dateDebut;
+        $this->values['date_fin']=$dateFin;
+        $this->values['operation']=$operation;
+        $this->values['user_id']=$user;
 
         return view('admin\logs',$this->values);
     }

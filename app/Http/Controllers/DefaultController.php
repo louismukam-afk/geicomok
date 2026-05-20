@@ -131,9 +131,6 @@ class DefaultController extends Controller
     }
 
     public static function log($message){
-        $l=new Log();
-        $l->message=$message;
-        $l->id_boutique=session('current_boutique')->id;
-        $l->save();
+        return Log::enregistrer('operation', $message, request());
     }
 }

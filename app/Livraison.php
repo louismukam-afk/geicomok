@@ -48,4 +48,8 @@ class Livraison extends Model
     {
         return  $this->belongsTo(User::class,'id_user');
     }
+    public function caisse()
+    {
+        return  $this->belongsTo(Caisse::class,'id_caisse');
+    }
 }

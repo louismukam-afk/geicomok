@@ -225,6 +225,11 @@
                 <p class="form-title">
                     Connexion</p>
                 <form class="login" method="post" action="{{route('attempt_login')}}">
+                    @if(session('success'))
+                        <div class="alert alert-success">
+                            <strong>{{session('success')}}</strong>
+                        </div>
+                    @endif
                     @if(count($errors)>0)
                         <div class="alert alert-danger">
                             <ul >

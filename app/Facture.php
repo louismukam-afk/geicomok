@@ -49,6 +49,14 @@ class Facture extends Model
     {
         return  $this->belongsTo(User::class,'id_user');
     }
+    public function caisse()
+    {
+        return  $this->belongsTo(Caisse::class,'id_caisse');
+    }
+    public function bonCredit()
+    {
+        return  $this->belongsTo(BonCredit::class,'id_bon_credit');
+    }
 
 
 }

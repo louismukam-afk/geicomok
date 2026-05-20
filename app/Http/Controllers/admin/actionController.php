@@ -13,17 +13,24 @@ class actionController extends Controller
     public function index($id)
     {
         $u=User::with('actions')->find($id);
+        if(!$u) {
+            return redirect()->route('user_management');
+        }
         $actions = $u->actions->pluck('action_name')->toArray();
-        $titre = trans_choice('admin.action', 10) . ': '.$u->fullname;
+        $titre = 'Attribution des fonctions : '.$u->name;
         $r=Action::where('id_user', '=', $id)->get();
 
         $ro=\Auth::user()->roles->pluck('value')->toArray();
         $valid=Functions::pp_exists($ro,0);
 
-        $values= array('titre'=>$titre,'actions'=>$r,'actions_array' => $actions,'validated'=>$valid,'user'=>$u);
+        $values= array('titre'=>$titre,'actions'=>$r,'actions_array' => $actions,'validated'=>$valid,'user'=>$u,'sections'=>action::catalog());
         if(session('success')){
             \Session::forget('success');
             $values['success']=true;
+        }
+        if(session('sync_success')){
+            \Session::forget('sync_success');
+            $values['sync_success']=true;
         }
 
         return view('admin.actions',$values);
@@ -86,7 +93,7 @@ class actionController extends Controller
         $id = $request->input('id');
 
         if($current_user->id != $id) {
-            $actions = $request->input('actions');
+            $actions = $request->input('actions', []);
             action::where('id_user', '=', $id)->delete();
             foreach ($actions as $a) {
                 $ac = new action();
@@ -98,6 +105,28 @@ class actionController extends Controller
 
 
         return redirect()->to(\URL::previous())->with('success',true);
+    }
+
+    public function sync($id)
+    {
+        $u = User::find($id);
+        if(!$u) {
+            return redirect()->route('user_management');
+        }
+
+        if(\Auth::user()->id != $id) {
+            $currentActions = action::where('id_user', '=', $id)->pluck('action_name')->toArray();
+            foreach (action::routeActionNames() as $routeAction) {
+                if(!in_array($routeAction, $currentActions)) {
+                    $ac = new action();
+                    $ac->id_user = $id;
+                    $ac->action_name = $routeAction;
+                    $ac->save();
+                }
+            }
+        }
+
+        return redirect()->to(\URL::previous())->with('sync_success', true);
     }
 
     /**

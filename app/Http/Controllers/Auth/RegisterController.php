@@ -4,6 +4,8 @@ namespace GEICOM\Http\Controllers\Auth;
 
 use GEICOM\User;
 use GEICOM\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\RegistersUsers;
 
@@ -64,8 +66,18 @@ class RegisterController extends Controller
     {
         return User::create([
             'name' => $data['name'],
+            'username' => isset($data['username']) ? $data['username'] : $data['email'],
             'email' => $data['email'],
             'password' => bcrypt($data['password']),
+            'active' => 0,
         ]);
+    }
+
+    protected function registered(Request $request, $user)
+    {
+        Auth::logout();
+
+        return redirect()->route('login')
+            ->with('success', 'Votre compte a été créé. Il doit être activé par un administrateur avant connexion.');
     }
 }

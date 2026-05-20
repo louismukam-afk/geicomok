@@ -149,12 +149,22 @@
 
         </div>
 
+        <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
+            <div class="div-square">
+                <a href="{{route('caisses_management')}}" >
+                    <i class="fa fa-money fa-5x"></i>
+                    <h4>Caisses </h4>
+                </a>
+            </div>
+
+        </div>
+
 
         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6">
             <div class="div-square">
                 <a href="{{route('show_log')}}" >
                     <i class="fa fa-archive fa-5x"></i>
-                    <h4>Voir les logs </h4>
+                    <h4>Journal des operations </h4>
                 </a>
             </div>
 

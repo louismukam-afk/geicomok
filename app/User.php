@@ -39,7 +39,7 @@ class User extends Authenticatable
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password',
+        'username', 'name', 'email', 'password', 'active',
     ];
 
 
@@ -65,7 +65,24 @@ class User extends Authenticatable
         return false;
     }
 
+    public function hasAnyActionStartingWith($prefix) {
+        if($this->isAdmin()) {
+            return true;
+        }
+
+        $a = action::where('action_name', 'like', $prefix.'%')
+            ->where('id_user', '=', $this->id)->first();
+        return $a != null;
+    }
+
     public function isAdmin() {
+
+        $roles = $this->roles->pluck('value')->toArray();
+        foreach ($roles as $role) {
+            if($role <= 1) {
+                return true;
+            }
+        }
 
         $a = action::whereRaw('(action_name = ? OR action_name = ?) AND id_user = ?',[action::ACTION_ALL, action::ACTION_ALMOST_ALL, $this->id])->first();
         if($a != null) {

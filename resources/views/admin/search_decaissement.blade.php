@@ -101,6 +101,15 @@
                                 <input class="form-control" id="date" name="date" type="date"  value="{{ old('date') }}" required AUTOFOCUS>
 
                             </div>
+                            <div class="form-group">
+                                <label>Caisse de sortie : </label>
+                                <select name="id_caisse" form="add_retrait_form" class="form-control" required>
+                                    <option value="">-- Choisir --</option>
+                                    @foreach($caisses_sortie as $caisse)
+                                        <option value="{{$caisse->id}}">{{$caisse->nom}} ({{number_format($caisse->solde(), 2)}})</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
                             <div class="form-group">
                                 <label >Ligne budgetaire : </label>
@@ -232,5 +241,4 @@
         <li class="active">Dépenses</li>
     </ol>
 @endsection
-
 

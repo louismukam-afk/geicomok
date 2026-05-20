@@ -3,6 +3,7 @@
 namespace GEICOM\Http;
 
 use GEICOM\Http\Middleware\AuthMiddleware;
+use GEICOM\Http\Middleware\AcionMiddleware;
 use GEICOM\Http\Middleware\boutique;
 use GEICOM\Http\Middleware\privileges\g_admin;
 use GEICOM\Http\Middleware\privileges\g_edit;
@@ -63,6 +64,7 @@ class Kernel extends HttpKernel
         'guest' => \GEICOM\Http\Middleware\RedirectIfAuthenticated::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'auth2' => AuthMiddleware::class,
+        'action' => AcionMiddleware::class,
         'start' => StartMiddleware::class,
         'g_vente' => g_vente::class,
         'g_edit' => g_edit::class,

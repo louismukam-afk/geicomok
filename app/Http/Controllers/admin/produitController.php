@@ -309,7 +309,9 @@ class produitController extends Controller
         }])->whereRaw('lower(libelle) LIKE ? OR lower(reference) LIKE ?',['%'.strtolower($pattern).'%','%'.strtolower($pattern).'%'])->orderBy('libelle')->limit(10)->get();
         $this->values['produits']=$p  ;
         $this->values['pattern']=$pattern  ;
-        return response()->json($this->values);
+        return response()->json($this->values)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
 
     }
 
@@ -325,7 +327,9 @@ class produitController extends Controller
         }])->whereRaw('lower(libelle) LIKE ? OR lower(reference) LIKE ?',['%'.strtolower($pattern).'%','%'.strtolower($pattern).'%'])->orderBy('libelle')->limit(10)->get();
         $this->values['produits']=$p  ;
         $this->values['pattern']=$pattern  ;
-        return response()->json($this->values);
+        return response()->json($this->values)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
 
     }
 

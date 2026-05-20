@@ -16,9 +16,15 @@ class AuthMiddleware
     public function handle($request, Closure $next)
     {
 
-        if (\Auth::check())
+        if (\Auth::check()) {
+            if ((int) \Auth::user()->active !== 1) {
+                \Auth::logout();
+                \Session::flush();
+                return redirect()->route('login')->withErrors(['inactive' => 'Votre compte est désactivé']);
+            }
             return $next($request);
-        else
-            return redirect()->route('login');
+        }
+
+        return redirect()->route('login');
     }
 }

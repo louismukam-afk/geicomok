@@ -18,7 +18,10 @@ class g_edit
     public function handle($request, Closure $next)
     {
         $r=Auth::user()->roles->pluck('value')->toArray();
-        if(!Functions::pp_exists($r,2)){
+        $routeAction = $request->route()->getAction();
+        $action = isset($routeAction['action']) ? $routeAction['action'] : null;
+
+        if(!Functions::pp_exists($r,2) && (!$action || !Auth::user()->canDoAction($action))){
             return redirect()->route('not_auth');
         }
         return $next($request);
