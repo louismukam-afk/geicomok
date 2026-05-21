@@ -394,7 +394,8 @@
                             str="";
 
                             for(i=0;i<produits.length;i++){
-
+                                produits[i].stock = produits[i].stock || {quantite: 0};
+                                produits[i].categorie = produits[i].categorie || {libelle: ''};
                                 str+= '<li class="product-li">'+
                                     '<h4  style="margin-top: 0;margin-bottom: 0"><strong class="product-name">'+ produits[i].libelle +' <small style="color: grey" class="product-reference">\ '+ (produits[i].reference?produits[i].reference:"") +'</small></strong></h4>'+
                                     '<hr style="margin-top: 10px;margin-bottom: 5px;">'+

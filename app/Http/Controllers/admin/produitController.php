@@ -307,6 +307,15 @@ class produitController extends Controller
         $p=Produit::with(['categorie','stock'=>function ($query) use($cb) {
             $query->where('id_boutique',$cb);
         }])->whereRaw('lower(libelle) LIKE ? OR lower(reference) LIKE ?',['%'.strtolower($pattern).'%','%'.strtolower($pattern).'%'])->orderBy('libelle')->limit(10)->get();
+        $p->each(function ($produit) use ($cb) {
+            if (!$produit->stock) {
+                $stock = new Stock();
+                $stock->id_produit = $produit->id;
+                $stock->id_boutique = $cb;
+                $stock->quantite = 0;
+                $produit->setRelation('stock', $stock);
+            }
+        });
         $this->values['produits']=$p  ;
         $this->values['pattern']=$pattern  ;
         return response()->json($this->values)
@@ -325,6 +334,15 @@ class produitController extends Controller
         $p=Produit::with(['categorie','stock'=>function ($query) use($magasin) {
             $query->where('id_boutique',$magasin);
         }])->whereRaw('lower(libelle) LIKE ? OR lower(reference) LIKE ?',['%'.strtolower($pattern).'%','%'.strtolower($pattern).'%'])->orderBy('libelle')->limit(10)->get();
+        $p->each(function ($produit) use ($magasin) {
+            if (!$produit->stock) {
+                $stock = new Stock();
+                $stock->id_produit = $produit->id;
+                $stock->id_boutique = $magasin;
+                $stock->quantite = 0;
+                $produit->setRelation('stock', $stock);
+            }
+        });
         $this->values['produits']=$p  ;
         $this->values['pattern']=$pattern  ;
         return response()->json($this->values)

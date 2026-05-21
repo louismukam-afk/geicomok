@@ -360,6 +360,7 @@
 
                             for(i=0;i<produits.length;i++){
                                 produits[i].stock = produits[i].stock || {quantite: 0};
+                                produits[i].categorie = produits[i].categorie || {libelle: ''};
 
                                 // On ajoute les prix multiples dans le JSON produit (prix_gros, prix_semi_gros, prix_comptoir)
                                 str+= '<li class="product-li">'+

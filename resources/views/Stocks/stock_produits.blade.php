@@ -43,6 +43,8 @@
                    produits=data['produits'];
                     str='';
                    for (i=0;i<produits.length;i++){
+                       produits[i].stock = produits[i].stock || {quantite: 0};
+                       produits[i].categorie = produits[i].categorie || {libelle: ''};
                        str='  <tr>'+
                            '<td>'+ (i+1) +'</td>'+
                            '<td><a href="#"> <strong>'+ produits[i].libelle +'</strong></a></td>'+
