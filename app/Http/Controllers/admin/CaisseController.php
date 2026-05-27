@@ -3,6 +3,8 @@
 namespace GEICOM\Http\Controllers\admin;
 
 use GEICOM\Caisse;
+use GEICOM\EntreeSpeciale;
+use GEICOM\EntreeSpecialeRemboursement;
 use GEICOM\Facture;
 use GEICOM\Livraison;
 use GEICOM\MouvementCaisse;
@@ -88,14 +90,23 @@ class CaisseController extends Controller
             ->whereBetween('date_mouvement', [$ddFull, $dfFull])
             ->orderBy('date_mouvement', 'desc')
             ->get();
+        $entreesSpeciales = EntreeSpeciale::whereIn('id', $mouvements->where('source_type', 'entree_speciale')->pluck('source_id')->toArray())->get()->keyBy('id');
+        $remboursementsSpeciaux = EntreeSpecialeRemboursement::with('entreeSpeciale')
+            ->whereIn('id', $mouvements->where('source_type', 'remboursement_entree_speciale')->pluck('source_id')->toArray())
+            ->get()
+            ->keyBy('id');
 
         $this->values['title'] = 'Etat de ma caisse';
         $this->values['dd'] = $dd;
         $this->values['df'] = $df;
         $this->values['caisses'] = $caisses;
         $this->values['mouvements'] = $mouvements;
+        $this->values['entrees_speciales'] = $entreesSpeciales;
+        $this->values['remboursements_speciaux'] = $remboursementsSpeciaux;
         $this->values['total_ventes'] = $mouvements->where('source_type', 'vente')->sum('montant');
         $this->values['total_achats'] = $mouvements->where('source_type', 'achat')->sum('montant');
+        $this->values['total_entrees_speciales'] = $mouvements->where('source_type', 'entree_speciale')->sum('montant');
+        $this->values['total_remboursements_speciaux'] = $mouvements->where('source_type', 'remboursement_entree_speciale')->sum('montant');
         $this->values['total_entrees'] = $mouvements->where('type', 'entree')->sum('montant');
         $this->values['total_sorties'] = $mouvements->where('type', 'sortie')->sum('montant');
 

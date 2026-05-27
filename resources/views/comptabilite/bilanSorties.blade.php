@@ -188,8 +188,63 @@
             </div>
 
 
+            <div class="col-md-8">
+                <h4 style="margin-top: 15px;">
+                    <strong>Remboursements des prets : </strong>{{$table_titre}}
+                </h4>
+                <table id="table-remboursements" class="table table-bordered table-striped table-condensed table-inverse">
+                    <thead>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Numero remboursement</th>
+                    <th>Entree speciale</th>
+                    <th>Caisse</th>
+                    <th>Description</th>
+                    <th>Solde avant</th>
+                    <th>Solde apres</th>
+                    <th>Montant</th>
+                    <th>Detail</th>
+                    </thead>
+                    <tbody>
+                    <?php $i=1; ?>
+                    @foreach($mouvements_remboursements as $m)
+                        @php
+                            $remboursement = isset($remboursements_speciaux[$m->source_id]) ? $remboursements_speciaux[$m->source_id] : null;
+                            $entree = $remboursement && $remboursement->entreeSpeciale ? $remboursement->entreeSpeciale : null;
+                        @endphp
+                        <tr>
+                            <td>{{$i++}}</td>
+                            <td>{{(new DateTime($m->date_mouvement))->format('d-m-Y H:i')}}</td>
+                            <td>{{$remboursement ? $remboursement->numero : ''}}</td>
+                            <td>{{$entree ? $entree->numero : ''}}</td>
+                            <td>{{$m->caisse ? $m->caisse->nom : ''}}</td>
+                            <td>{{$m->description}}</td>
+                            <td>{{number_format($m->solde_avant, 2)}}</td>
+                            <td>{{number_format($m->solde_apres, 2)}}</td>
+                            <td>{{number_format($m->montant, 2)}}</td>
+                            <td>
+                                @if($entree)
+                                    <a href="{{route('entrees_speciales_show', $entree->id)}}" class="btn btn-xs btn-primary">Voir</a>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                    <tfoot>
+                    <th>Total</th>
+                    <th></th><th></th><th></th><th></th><th></th><th></th><th></th>
+                    <th>{{number_format($total_remboursements, 2)}}</th>
+                    <th></th>
+                    </tfoot>
+                </table>
+
+                <h4 class="alert alert-warning">
+                    Total remboursements : <strong>{{number_format($total_remboursements, 2).' FCFA'}}</strong>
+                </h4>
+            </div>
+
             <h3 class="alert alert-info col-md-12">
-                {{trans('Dépenses totales').' : '.($total+$total_d).' '."FCFA"}}
+                {{trans('Dépenses totales').' : '.($total+$total_d+$total_remboursements).' '."FCFA"}}
             </h3>
 
 
@@ -354,6 +409,32 @@
                                 `@include('perso.header-trim')` +
                                 win.document.body.innerHTML;
                         },
+                        footer: true,
+                    }
+                ]
+            });
+            $('#table-remboursements').DataTable({
+                dom: 'Bfrtip',
+                pageLength: 50,
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fa fa-file-excel-o"></i> Excel',
+                        titleAttr: 'Export to Excel',
+                        title: '{{ trans('admin.bilan_sorties') }} - {{ sanitize($table_titre) }}',
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: '<i class="fa fa-file-pdf-o"></i> PDF',
+                        titleAttr: 'PDF',
+                        title: '{{ trans('admin.bilan_sorties') }} - {{ sanitize($table_titre) }}',
+                        footer: true,
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fa fa-print"></i> @lang("imprimer")',
+                        titleAttr: '@lang("imprimer")',
+                        title: '{{ trans('admin.bilan_sorties') }} - {{ sanitize($table_titre) }}',
                         footer: true,
                     }
                 ]

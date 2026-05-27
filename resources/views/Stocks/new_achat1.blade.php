@@ -40,9 +40,8 @@
                     <tr>
                         <th>Ref</th>
                         <th style="min-width: 250px">Produit</th>
-                        <th>Prix</th>
                         <th style="width: 85px">Quantité</th>
-                        <th style="width: 125px">Total</th>
+                        <th style="width: 160px">Montant total</th>
                         <th></th>
                     </tr>
                     </thead>
@@ -225,10 +224,6 @@
                                     ' <h4 class="product-quantite">Qté en stock : <strong> '+ produits[i].stock.quantite +'</strong></h4>'+
 
                                     '</div>'+
-                                    '<div class="col-md-6">'+
-                                    '<h4 class="product-prix">Prix : <strong> '+ produits[i].prix_achat +' @lang('main.devise')</strong></h4>'+
-
-                                    '</div>'+
                                     '<small style="color: grey"><strong class="category-name">' + produits[i].categorie.libelle + '</strong></small>'+
                                     '<div class="btn btn-success pull-right" style="margin-right: 5px" onclick="addProduct('+ produits[i].id +',\'' + sanitize(produits[i].libelle) + '\',\''+ sanitize(produits[i].reference) +'\','+ produits[i].prix_achat +','+ produits[i].stock.quantite +');hideAll()"><span class="glyphicon glyphicon-plus"></span> Ajouter</div>'+
                                     '</div>'+
@@ -257,8 +252,7 @@
             n=parseInt(numEl.val());
             $('#body-facture').append('<tr id="row-produit'+ n +'">' +
                 '<td><h4>'+ reference +'</h4></td>' +
-                '<td><h4><strong class="text-uppercase">'+ libelle +'</strong></h4><input type="hidden" name="id[]" value="'+ id +'" /></td>' +
-                '<td><h4><span id="prix'+ n +'">'+ prix +'</span> @lang('main.devise')</h4></td>' +
+                '<td><h4><strong class="text-uppercase">'+ libelle +'</strong></h4><input type="hidden" name="id[]" value="'+ id +'" /><span id="prix'+ n +'" style="display:none">'+ prix +'</span></td>' +
                 '<td><input type="number" step="1" value="1" id="quantite'+ n +'" min="1"  name="quantite[]" class="form-control" onkeyup="kevaluateMiniTotal(event,'+ n +')"  onchange="evaluateMiniTotal('+ n +')" required /></td>' +
                 '<td><h4><span id="minitotal'+ n +'" class="minitotal">'+ prix +'</span> @lang('main.devise')</h4></td>' +
                 '<td> <span class="btn btn-xs btn-danger" onclick="removeProduct(\'row-produit'+ n +'\')"><span class="glyphicon glyphicon-trash"></span> </span>  </td>' +

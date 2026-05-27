@@ -16,6 +16,8 @@
         <div class="alert alert-info">
             <strong>Ventes:</strong> {{number_format($total_ventes, 2)}} @lang('main.devise') |
             <strong>Achats:</strong> {{number_format($total_achats, 2)}} @lang('main.devise') |
+            <strong>Entrees speciales:</strong> {{number_format($total_entrees_speciales, 2)}} @lang('main.devise') |
+            <strong>Remb. prets:</strong> {{number_format($total_remboursements_speciaux, 2)}} @lang('main.devise') |
             <strong>Entrees:</strong> {{number_format($total_entrees, 2)}} @lang('main.devise') |
             <strong>Sorties:</strong> {{number_format($total_sorties, 2)}} @lang('main.devise') |
             <strong>Reste periode:</strong> {{number_format($total_entrees - $total_sorties, 2)}} @lang('main.devise')
@@ -41,11 +43,40 @@
             </thead>
             <tbody>
             @foreach($mouvements as $m)
+                @php
+                    $sourceLabel = $m->source_type;
+                    $sourceUrl = null;
+                    if ($m->source_type == 'entree_speciale') {
+                        $entree = isset($entrees_speciales[$m->source_id]) ? $entrees_speciales[$m->source_id] : null;
+                        if ($entree) {
+                            $sourceLabel = 'Entree speciale '.$entree->numero.' ('.$entree->type.')';
+                            $sourceUrl = route('entrees_speciales_show', $entree->id);
+                        }
+                    } elseif ($m->source_type == 'remboursement_entree_speciale') {
+                        $remboursement = isset($remboursements_speciaux[$m->source_id]) ? $remboursements_speciaux[$m->source_id] : null;
+                        if ($remboursement && $remboursement->entreeSpeciale) {
+                            $sourceLabel = 'Remboursement '.$remboursement->numero.' / '.$remboursement->entreeSpeciale->numero;
+                            $sourceUrl = route('entrees_speciales_show', $remboursement->entreeSpeciale->id);
+                        }
+                    } elseif ($m->source_type == 'transfert') {
+                        $sourceLabel = 'Transfert caisse';
+                    } elseif ($m->source_type == 'vente') {
+                        $sourceLabel = 'Vente';
+                    } elseif ($m->source_type == 'achat') {
+                        $sourceLabel = 'Achat';
+                    }
+                @endphp
                 <tr>
                     <td>{{(new DateTime($m->date_mouvement))->format('d-m-Y H:i')}}</td>
                     <td>{{$m->caisse ? $m->caisse->nom : ''}}</td>
                     <td>{{$m->type}}</td>
-                    <td>{{$m->source_type}}</td>
+                    <td>
+                        @if($sourceUrl)
+                            <a href="{{$sourceUrl}}">{{$sourceLabel}}</a>
+                        @else
+                            {{$sourceLabel}}
+                        @endif
+                    </td>
                     <td>{{number_format($m->montant, 2)}}</td>
                     <td>{{number_format($m->solde_avant, 2)}}</td>
                     <td><strong>{{number_format($m->solde_apres, 2)}}</strong></td>

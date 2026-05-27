@@ -13,6 +13,9 @@
         @if($canCreateProduit)
             <button class="btn btn-primary" data-toggle="modal" data-backdrop="false" href="#add_pdt"
             ><span class="glyphicon glyphicon-plus"></span> Nouveau produit</button>
+            <a href="{{ route('import_produit') }}" class="btn btn-success">
+                <span class="glyphicon glyphicon-upload"></span> Importer
+            </a>
         @endif
         @if($canDeleteProduit)
             <td><a href="#multi-delete" id="multi-delete" onclick="sendToDelete('{{route('mdelete_produit')}}')"  class="btn btn-danger btn-xs pull-right"><span class="glyphicon glyphicon-trash"></span> remove</a></td>

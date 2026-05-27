@@ -124,6 +124,9 @@ Route::group(['middleware'=>'start'],function () {
 
                     //////////////////Les categories
                     Route::get('admin/categorie', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_CATEGORIE_ACTION_INDEX, 'uses'=>'admin\CategorieController@index', 'as'=>'categorie_management']);
+                    Route::get('admin/categorie/import', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_CATEGORIE_ACTION_STORE, 'uses'=>'admin\CategorieController@importForm', 'as'=>'import_categorie']);
+                    Route::post('admin/categorie/import', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_CATEGORIE_ACTION_STORE, 'uses'=>'admin\CategorieController@import', 'as'=>'import_categorie_store']);
+                    Route::get('admin/categorie/import/template', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_CATEGORIE_ACTION_STORE, 'uses'=>'admin\CategorieController@template', 'as'=>'template_categorie_import']);
                     Route::post('admin/categorie/store', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_CATEGORIE_ACTION_STORE, 'uses'=>'admin\CategorieController@store', 'as'=>'store_categorie']);
                     Route::post('admin/categorie/update', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_CATEGORIE_ACTION_UPDATE, 'uses'=>'admin\CategorieController@update', 'as'=>'update_categorie']);
                     Route::post('admin/categorie/delete/', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_CATEGORIE_ACTION_DELETE, 'uses'=>'admin\CategorieController@destroys', 'as'=>'mdelete_categorie']);
@@ -131,6 +134,9 @@ Route::group(['middleware'=>'start'],function () {
 
                     /////////////////////Les produits
                     Route::get('admin/produit', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_PRODUIT_ACTION_INDEX, 'uses'=>'admin\produitController@index', 'as'=>'produit_management']);
+                    Route::get('admin/produit/import', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_PRODUIT_ACTION_STORE, 'uses'=>'admin\produitController@importForm', 'as'=>'import_produit']);
+                    Route::post('admin/produit/import', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_PRODUIT_ACTION_STORE, 'uses'=>'admin\produitController@import', 'as'=>'import_produit_store']);
+                    Route::get('admin/produit/import/template', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_PRODUIT_ACTION_STORE, 'uses'=>'admin\produitController@template', 'as'=>'template_produit_import']);
                     Route::get('admin/produit1', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_PRODUIT_ACTION_INDEX1, 'uses'=>'admin\produitController@index1', 'as'=>'produit_management1']);
                     Route::post('admin/produit/store', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_PRODUIT_ACTION_STORE, 'uses'=>'admin\produitController@store', 'as'=>'store_produit']);
                     Route::post('admin/produit/store1', ['middleware'=>'action', 'action'=>Action::ACTION_ADMIN_PRODUIT_ACTION_STORE1, 'uses'=>'admin\produitController@store1', 'as'=>'store_produit1']);
@@ -218,6 +224,12 @@ Route::group(['middleware'=>'start'],function () {
                     Route::get('/comptabilite/ligne/get-data/{id}', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_LIGNE_DATA, 'uses'=>'comptabilite\LigneBudgetController@getLineData', 'as'=>'getLingeData_ligne']);
                     Route::get('/comptabilite/ligne/report/{id}', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_LIGNE_DATA, 'uses'=>'comptabilite\LigneBudgetController@report', 'as'=>'report_ligne']);
                     Route::get('/comptabilite/', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_INDEX, 'uses'=>'comptabilite\comptabiliteController@index', 'as'=>'comptabilite']);
+
+                    Route::get('/comptabilite/entrees-speciales', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_ENTREE_SPECIALE_INDEX, 'uses'=>'comptabilite\EntreeSpecialeController@index', 'as'=>'entrees_speciales']);
+                    Route::post('/comptabilite/entrees-speciales/store', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_ENTREE_SPECIALE_STORE, 'uses'=>'comptabilite\EntreeSpecialeController@store', 'as'=>'entrees_speciales_store']);
+                    Route::get('/comptabilite/entrees-speciales/rappels', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_ENTREE_SPECIALE_RAPPEL, 'uses'=>'comptabilite\EntreeSpecialeController@rappels', 'as'=>'entrees_speciales_rappels']);
+                    Route::get('/comptabilite/entrees-speciales/{id}', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_ENTREE_SPECIALE_INDEX, 'uses'=>'comptabilite\EntreeSpecialeController@show', 'as'=>'entrees_speciales_show']);
+                    Route::post('/comptabilite/entrees-speciales/{id}/remboursement', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_ENTREE_SPECIALE_REMBOURSEMENT, 'uses'=>'comptabilite\EntreeSpecialeController@storeRemboursement', 'as'=>'entrees_speciales_remboursement']);
 
 
                     Route::any('/comptabilite/bilan/entrees', ['middleware'=>'action', 'action'=>Action::ACTION_COMPTABILITE_BILAN_ENTREES, 'uses'=>'comptabilite\bilanComptaController@index']);

@@ -6,6 +6,7 @@ use GEICOM\Boutique;
 use GEICOM\Categorie;
 use GEICOM\ProduitLies;
 use GEICOM\Stock;
+use GEICOM\Support\ImportTable;
 use Illuminate\Http\Request;
 use GEICOM\Produit;
 use GEICOM\Http\Controllers\Controller;
@@ -26,6 +27,102 @@ class produitController extends Controller
         $this->values['produit']=$p  ;
         $this->values['categories']=$c;
         return view('admin.produit',$this->values);
+    }
+
+    public function importForm()
+    {
+        $this->values['title']='Import des produits';
+        $this->values['categories']=Categorie::orderBy('libelle')->get();
+        return view('admin.import_produits', $this->values);
+    }
+
+    public function import(Request $request)
+    {
+        $this->validate($request, [
+            'fichier' => 'required|file',
+        ]);
+
+        try {
+            $rows = ImportTable::readRows($request->file('fichier'));
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('import_produit')->withErrors(['fichier' => $e->getMessage()]);
+        }
+
+        $created = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach ($rows as $index => $row) {
+            $line = $index + 2;
+            $libelle = trim(array_get($row, 'libelle', array_get($row, 'nom', '')));
+
+            if ($libelle === '') {
+                $skipped++;
+                $errors[] = 'Ligne '.$line.' ignoree : libelle vide.';
+                continue;
+            }
+
+            if (Produit::whereRaw('lower(libelle) = ?', [strtolower($libelle)])->exists()) {
+                $skipped++;
+                continue;
+            }
+
+            $categorie = $this->findImportCategorie($row);
+            if (!$categorie) {
+                $skipped++;
+                $errors[] = 'Ligne '.$line.' ignoree : categorie introuvable.';
+                continue;
+            }
+
+            $p = new Produit();
+            $p->libelle = $libelle;
+            $p->reference = trim(array_get($row, 'reference', ''));
+            $p->description = trim(array_get($row, 'description', ''));
+            $p->id_categorie = $categorie->id;
+            $p->prix = $this->numberValue(array_get($row, 'prix', array_get($row, 'prix_vente', 0)));
+            $p->prix_gros = $this->numberValue(array_get($row, 'prix_gros', 0));
+            $p->prix_semi_gros = $this->numberValue(array_get($row, 'prix_semi_gros', 0));
+            $p->prix_comptoir = $this->numberValue(array_get($row, 'prix_comptoir', 0));
+            $p->prix_achat = $this->numberValue(array_get($row, 'prix_achat', 0));
+            $p->prix_minimum = $this->numberValue(array_get($row, 'prix_minimum', array_get($row, 'quantite_minimale', 0)));
+            $p->quantite_minimale = $this->numberValue(array_get($row, 'quantite_minimale', 0));
+            $p->save();
+
+            $this->createStocksForProduct($p->id);
+            $created++;
+        }
+
+        return redirect()->route('import_produit')->with('import_result', [
+            'created' => $created,
+            'skipped' => $skipped,
+            'errors' => $errors,
+        ]);
+    }
+
+    public function template()
+    {
+        $headers = [
+            'id',
+            'libelle',
+            'description',
+            'quantite_minimale',
+            'reference',
+            'id_categorie',
+            'categorie',
+            'prix',
+            'prix_achat',
+            'prix_minimum',
+            'prix_semi_gros',
+            'prix_comptoir',
+            'prix_gros',
+        ];
+        $examples = [
+            ['', 'Savon', 'Savon parfum citron', '0', 'REF001', '', 'Cosmetiques', '1000', '700', '0', '950', '980', '900'],
+            ['', 'Jus orange', 'Bouteille 50cl', '0', 'REF002', '', 'Boissons', '500', '350', '0', '475', '490', '450'],
+        ];
+        $path = ImportTable::createXlsxTemplate($headers, $examples);
+
+        return response()->download($path, 'template_import_produits.xlsx')->deleteFileAfterSend(true);
     }
 
     public  function index1()
@@ -351,6 +448,64 @@ class produitController extends Controller
 
     }
 
+    private function findImportCategorie($row)
+    {
+        $idCategorie = trim(array_get($row, 'id_categorie', ''));
+        if ($idCategorie !== '') {
+            $categorie = Categorie::find($idCategorie);
+            if ($categorie) {
+                return $categorie;
+            }
+        }
 
+        $libelle = trim(array_get($row, 'categorie', array_get($row, 'libelle_categorie', '')));
+        if ($libelle === '') {
+            return null;
+        }
+
+        $categorie = Categorie::whereRaw('lower(libelle) = ?', [strtolower($libelle)])->first();
+        if ($categorie) {
+            return $categorie;
+        }
+
+        $categorie = new Categorie();
+        $categorie->libelle = $libelle;
+        $categorie->save();
+
+        return $categorie;
+    }
+
+    private function createStocksForProduct($idProduit)
+    {
+        $date = date('Y-m-d H:i:s');
+        $boutiques = Boutique::all();
+        $stocks = [];
+
+        foreach ($boutiques as $boutique) {
+            $stocks[] = [
+                'id_produit' => $idProduit,
+                'id_boutique' => $boutique->id,
+                'created_at' => $date,
+                'updated_at' => $date,
+            ];
+        }
+
+        if (count($stocks) > 0) {
+            Stock::insert($stocks);
+        }
+    }
+
+    private function numberValue($value)
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return 0;
+        }
+
+        $value = str_replace(' ', '', $value);
+        $value = str_replace(',', '.', $value);
+
+        return is_numeric($value) ? (float) $value : 0;
+    }
 
     }

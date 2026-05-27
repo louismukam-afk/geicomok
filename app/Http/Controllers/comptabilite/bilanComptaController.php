@@ -2,6 +2,9 @@
 
 use Carbon\Carbon;
 use GEICOM\Achat;
+use GEICOM\EntreeSpeciale;
+use GEICOM\EntreeSpecialeRemboursement;
+use GEICOM\MouvementCaisse;
 use GEICOM\Vente;
 use GEICOM\decaissement;
 use GEICOM\produit;
@@ -124,11 +127,27 @@ class bilanComptaController extends Controller {
 
 
 
+        $mouvementsEntreesSpeciales = $this->mouvementsCaisseParPeriode('entree', 'entree_speciale', $option, $date_range, $date_debut, $date_fin);
+
         $total=0;
         foreach ($p as $pay){
             $total+=$pay->total;
         }
-        $values= array('titre'=>$titre,'payements'=>$p,'total'=>$total,'table_titre'=>$tt);
+        $total_entrees_speciales = 0;
+        foreach ($mouvementsEntreesSpeciales as $mouvement) {
+            $total_entrees_speciales += $mouvement->montant;
+        }
+
+        $entreesSpeciales = EntreeSpeciale::whereIn('id', $mouvementsEntreesSpeciales->pluck('source_id')->toArray())->get()->keyBy('id');
+        $values= array(
+            'titre'=>$titre,
+            'payements'=>$p,
+            'total'=>$total,
+            'table_titre'=>$tt,
+            'mouvements_entrees_speciales'=>$mouvementsEntreesSpeciales,
+            'entrees_speciales'=>$entreesSpeciales,
+            'total_entrees_speciales'=>$total_entrees_speciales
+        );
         if($date_range && ($date_debut != null || $date_fin != null))
         {
             $values['date_debut']=$date_debut;
@@ -273,6 +292,8 @@ class bilanComptaController extends Controller {
         }
 
 
+            $mouvementsRemboursements = $this->mouvementsCaisseParPeriode('sortie', 'remboursement_entree_speciale', $option, $date_range, $date_debut, $date_fin);
+
             $total_p = 0;
             foreach ($p as $pay) {
                 $total_p += $pay->total;
@@ -281,8 +302,27 @@ class bilanComptaController extends Controller {
             foreach ($d as $pay) {
                 $total_d += $pay->montant;
             }
+            $total_remboursements = 0;
+            foreach ($mouvementsRemboursements as $mouvement) {
+                $total_remboursements += $mouvement->montant;
+            }
+            $remboursementsSpeciaux = EntreeSpecialeRemboursement::with('entreeSpeciale')
+                ->whereIn('id', $mouvementsRemboursements->pluck('source_id')->toArray())
+                ->get()
+                ->keyBy('id');
             $pers = personnel::all();
-            $values = array('titre' => $titre, 'payements' => $p, 'total' => $total_p, 'total_d' => $total_d, 'decaissements' => $d, 'personnels' => $pers, 'table_titre' => $tt);
+            $values = array(
+                'titre' => $titre,
+                'payements' => $p,
+                'total' => $total_p,
+                'total_d' => $total_d,
+                'decaissements' => $d,
+                'personnels' => $pers,
+                'table_titre' => $tt,
+                'mouvements_remboursements' => $mouvementsRemboursements,
+                'remboursements_speciaux' => $remboursementsSpeciaux,
+                'total_remboursements' => $total_remboursements
+            );
             if ($date_range && ($date_debut != null || $date_fin != null)) {
                 $values['date_debut'] = $date_debut;
                 $values['date_fin'] = $date_fin;
@@ -296,6 +336,33 @@ class bilanComptaController extends Controller {
 
             return view('comptabilite.bilanSorties', $values);
         }
+
+    private function mouvementsCaisseParPeriode($type, $sourceType, $option, $dateRange, $dateDebut, $dateFin)
+    {
+        $query = MouvementCaisse::with('caisse')
+            ->where('type', $type)
+            ->where('source_type', $sourceType);
+
+        if ($dateRange && ($dateDebut != null || $dateFin != null)) {
+            if ($dateDebut != null) {
+                $query->where('date_mouvement', '>=', (new \DateTime($dateDebut))->format('Y-m-d').' 00:00:00');
+            }
+            if ($dateFin != null) {
+                $query->where('date_mouvement', '<=', (new \DateTime($dateFin))->format('Y-m-d').' 23:59:59');
+            }
+        } elseif ($option == 'month') {
+            $query->where('date_mouvement', '>=', date('Y-m-01').' 00:00:00')
+                ->where('date_mouvement', '<=', date('Y-m-t').' 23:59:59');
+        } elseif ($option == 'week') {
+            $query->where('date_mouvement', '>=', Carbon::now()->startOfWeek()->toDateString().' 00:00:00')
+                ->where('date_mouvement', '<=', Carbon::now()->endOfWeek()->toDateString().' 23:59:59');
+        } elseif ($option == 'today') {
+            $query->where('date_mouvement', '>=', date('Y-m-d').' 00:00:00')
+                ->where('date_mouvement', '<=', date('Y-m-d').' 23:59:59');
+        }
+
+        return $query->orderBy('date_mouvement', 'desc')->get();
+    }
 
 
 	/**

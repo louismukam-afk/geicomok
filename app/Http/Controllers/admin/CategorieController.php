@@ -3,6 +3,7 @@
 namespace GEICOM\Http\Controllers\admin;
 
 use GEICOM\Categorie;
+use GEICOM\Support\ImportTable;
 use Illuminate\Http\Request;
 use GEICOM\Http\Controllers\Controller;
 
@@ -22,6 +23,67 @@ class CategorieController extends Controller
         $c=Categorie::orderBy('libelle')->get();
         $this->values['categories']=$c;
         return view('admin.categorie',$this->values);
+    }
+
+    public function importForm()
+    {
+        $this->values['title']='Import des categories';
+        return view('admin.import_categories', $this->values);
+    }
+
+    public function import(Request $request)
+    {
+        $this->validate($request, [
+            'fichier' => 'required|file',
+        ]);
+
+        try {
+            $rows = ImportTable::readRows($request->file('fichier'));
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('import_categorie')->withErrors(['fichier' => $e->getMessage()]);
+        }
+
+        $created = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach ($rows as $index => $row) {
+            $libelle = trim(array_get($row, 'libelle', array_get($row, 'categorie', '')));
+
+            if ($libelle === '') {
+                $skipped++;
+                $errors[] = 'Ligne '.($index + 2).' ignoree : libelle vide.';
+                continue;
+            }
+
+            if (Categorie::whereRaw('lower(libelle) = ?', [strtolower($libelle)])->exists()) {
+                $skipped++;
+                continue;
+            }
+
+            $c = new Categorie();
+            $c->libelle = $libelle;
+            $c->save();
+            $created++;
+        }
+
+        return redirect()->route('import_categorie')->with('import_result', [
+            'created' => $created,
+            'skipped' => $skipped,
+            'errors' => $errors,
+        ]);
+    }
+
+    public function template()
+    {
+        $headers = ['id', 'libelle'];
+        $examples = [
+            ['', 'Boissons'],
+            ['', 'Epicerie'],
+        ];
+        $path = ImportTable::createXlsxTemplate($headers, $examples);
+
+        return response()->download($path, 'template_import_categories.xlsx')->deleteFileAfterSend(true);
     }
 
     /**
@@ -120,4 +182,5 @@ class CategorieController extends Controller
 
 
     }
+
 }

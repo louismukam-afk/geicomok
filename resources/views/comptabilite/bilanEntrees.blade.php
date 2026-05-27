@@ -132,6 +132,66 @@
             <h4 class="alert alert-warning">
                 Total : <strong>{{ $total . ' ' . trans('FCFA') }}</strong>
             </h4>
+
+            <h4 style="margin-top: 20px;">
+                Entrees speciales : {{$table_titre}}
+            </h4>
+            <table id="table-entrees-speciales" class="table table-bordered table-striped table-condensed table-inverse">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Numero</th>
+                    <th>Caisse</th>
+                    <th>Type</th>
+                    <th>Source</th>
+                    <th>Telephone</th>
+                    <th>Description</th>
+                    <th>Solde avant</th>
+                    <th>Solde apres</th>
+                    <th>Montant</th>
+                    <th>Detail</th>
+                </tr>
+                </thead>
+                <tbody>
+                @php $j = 1; @endphp
+                @foreach($mouvements_entrees_speciales as $m)
+                    @php
+                        $entree = isset($entrees_speciales[$m->source_id]) ? $entrees_speciales[$m->source_id] : null;
+                    @endphp
+                    <tr>
+                        <td>{{$j++}}</td>
+                        <td>{{(new DateTime($m->date_mouvement))->format('d-m-Y H:i')}}</td>
+                        <td>{{$entree ? $entree->numero : ''}}</td>
+                        <td>{{$m->caisse ? $m->caisse->nom : ''}}</td>
+                        <td>{{$entree ? $entree->type : $m->source_type}}</td>
+                        <td>{{$entree ? $entree->source_nom : ''}}</td>
+                        <td>{{$entree ? $entree->source_telephone : ''}}</td>
+                        <td>{{$m->description}}</td>
+                        <td>{{number_format($m->solde_avant, 2, '.', ' ')}}</td>
+                        <td>{{number_format($m->solde_apres, 2, '.', ' ')}}</td>
+                        <td>{{number_format($m->montant, 2, '.', ' ')}}</td>
+                        <td>
+                            @if($entree)
+                                <a href="{{route('entrees_speciales_show', $entree->id)}}" class="btn btn-xs btn-primary">Voir</a>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+                <tfoot>
+                <tr>
+                    <th>Total</th>
+                    <th></th><th></th><th></th><th></th><th></th><th></th><th></th><th></th><th></th>
+                    <th>{{number_format($total_entrees_speciales, 2, '.', ' ')}}</th>
+                    <th></th>
+                </tr>
+                </tfoot>
+            </table>
+
+            <h4 class="alert alert-info">
+                Total global entrees : <strong>{{number_format($sumverse + $total_entrees_speciales, 2, '.', ' ')}} FCFA</strong>
+            </h4>
         </div>
     </div>
 
@@ -239,6 +299,15 @@
                             columns: ':not(:last-child)'
                         }
                     }
+                ]
+            });
+            $('#table-entrees-speciales').DataTable({
+                dom: 'Bfrtip',
+                pageLength: 50,
+                buttons: [
+                    { extend: 'excelHtml5', text: '<i class="fa fa-file-excel-o"></i> Excel', title: exportTitle },
+                    { extend: 'pdfHtml5', text: '<i class="fa fa-file-pdf-o"></i> PDF', title: exportTitle, footer: true },
+                    { extend: 'print', text: '<i class="fa fa-print"></i> Imprimer', title: exportTitle, footer: true }
                 ]
             });
         });

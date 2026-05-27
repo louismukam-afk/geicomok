@@ -16,6 +16,10 @@ class StartMiddleware
      */
     public function handle($request, Closure $next)
     {
+        if ($request->is('start/*')) {
+            return $next($request);
+        }
+
         $fs=session('first_start');
         if(!$fs)
         {

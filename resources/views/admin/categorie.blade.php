@@ -5,6 +5,9 @@
 
         <button class="btn btn-primary" data-toggle="modal" data-backdrop="false" href="#add_cat"
         ><span class="glyphicon glyphicon-plus"></span> Nouvelle catégorie</button>
+        <a href="{{ route('import_categorie') }}" class="btn btn-success">
+            <span class="glyphicon glyphicon-upload"></span> Importer
+        </a>
         <td><a href="#multi-delete" id="multi-delete" onclick="sendToDelete('{{route('mdelete_categorie')}}')"  class="btn btn-danger btn-xs pull-right"><span class="glyphicon glyphicon-trash"></span> remove</a></td>
 
         <table class="table  table-striped table-condensed table-inverse" style="margin-top: 15px;">
